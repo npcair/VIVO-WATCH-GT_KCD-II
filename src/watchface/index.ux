@@ -1,0 +1,581 @@
+<template>
+  <div class="wrap">
+    <div class="container" show="{{screenStatus === 'on'}}">
+      <image
+        src="/assets/dial.png"
+        class="dial"
+        style="transform: rotate({{hourDeg}}deg)"></image>
+      <image src="/assets/bg.png" class="bg"></image>
+      <image
+        src="/assets/ring.png"
+        class="ring"
+        style="transform: rotate({{secondDeg}}deg)"></image>
+      <image src="/assets/r/{{svg}}.svg" class="ring-mask"></image>
+      <image src="/assets/2ring.png" class="ring2"></image>
+      <image src="/assets/arrow.png" class="arrow"></image>
+      <div class="finger" style="transform: rotate({{secondDeg}}deg)">
+        <image src="/assets/finger.png" class="img"></image>
+      </div>
+      <image src="/assets/f/{{face}}.png" class="face"></image>
+      <div class="date">
+        <text class="txt">{{ dateStr }}</text>
+      </div>
+      <div class="svgTime">
+        <div>
+          <image src="/assets/ch/{{h_}}.svg"></image>
+          <image src="/assets/ch/{{_h}}.svg"></image>
+          <image src="/assets/ch/l.svg"></image>
+          <image src="/assets/ch/{{m_}}.svg"></image>
+          <image src="/assets/ch/{{_m}}.svg"></image>
+          <image src="/assets/ch/l.svg"></image>
+          <image src="/assets/ch/{{s_}}.svg"></image>
+          <image src="/assets/ch/{{_s}}.svg"></image>
+        </div>
+      </div>
+      <div class="data-box">
+        <div class="calorie box">
+          <text class="txt">{{ Calorie }}</text>
+        </div>
+        <div class="heart box">
+          <text class="txt">{{ Heart }}</text>
+        </div>
+        <div class="battery box">
+          <text class="txt">{{ Battery }}%</text>
+        </div>
+        <div class="step box">
+          <text class="txt">{{ Step }}</text>
+        </div>
+      </div>
+      <div class="area" @click="nextFace()"></div>
+    </div>
+
+    <div class="container" show="{{screenStatus === 'aod'}}">
+      <div class="aod-box">
+        <text class="time">{{ timeStr }}</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import _configuration from '@system.configuration'
+  import _battery from '@system.battery'
+  import _event from '@system.event'
+  import _app from '@system.app'
+  import _storage from '@system.storage'
+  import _timer from '@system.timer'
+  import _vibrator from '@system.vibrator'
+  import _router from '@system.router'
+  import _device from '@system.device'
+  import _property from '@system.property'
+  import _health from '@service.health'
+  const isDev = process.env.NODE_ENV == 'development'
+  const isPreview = isDev && false
+  const now = () => (isPreview ? new Date(2024, 1, 18, 10, 0, 8) : new Date())
+  function _sub(name, cb) {
+    try {
+      const id = _event.subscribe({
+        eventName: name,
+        callback: cb,
+      })
+      return id
+    } catch (e) {}
+  }
+  const Health = (() => {
+    let cb = null
+    let lastHeart = 0
+    const HR = _health.DATA_TYPES ? _health.DATA_TYPES.HEART_RATE : 0
+    return {
+      init(callback) {
+        cb = (res) => {
+          const v =
+            res && res.value != null
+              ? res.value
+              : res && res.data && res.data.value
+          if (v) {
+            const n = parseInt(v)
+            if (n && n !== lastHeart) {
+              callback((lastHeart = n))
+            }
+          }
+        }
+      },
+      sub() {
+        this.unsub()
+        try {
+          _health.subscribeSample({
+            dataType: HR,
+            callback: cb,
+          })
+        } catch (e) {}
+      },
+      unsub() {
+        try {
+          _health.unsubscribeSample({ dataType: HR })
+        } catch (e) {}
+      },
+    }
+  })()
+
+  const Battery = (() => {
+    let id = null
+    let cb = null
+    let last = -1
+    function getBattery() {
+      try {
+        const bs = _battery.getStatusSync()
+        const br = Math.round((bs.level || 0) * 100)
+        return br
+      } catch (e) {}
+      return 0
+    }
+    return {
+      init(callback) {
+        cb = () => {
+          const o = getBattery()
+          if (last !== o) {
+            callback((last = o))
+          }
+        }
+      },
+      sub() {
+        this.unsub()
+        cb()
+        if (!cb) return
+        id = _sub('usual.event.BATTERY_CHANGED', cb)
+      },
+      unsub() {
+        if (id) {
+          _event.unsubscribe({ id })
+          id = null
+        }
+      },
+    }
+  })()
+  const Today = (() => {
+    let id = null
+    let cb = null
+    return {
+      init(callback) {
+        cb = (t) => {
+          if (typeof t === 'string') {
+            try {
+              t = JSON.parse(t)
+            } catch (e) {
+              return
+            }
+          }
+          callback(t)
+        }
+      },
+      sub() {
+        this.unsub()
+        if (!cb) return
+        cb(
+          _storage.getSync({ key: 'todayActivity.CURRENT_DATA', global: true })
+        )
+        id = _sub('usual.event.TODAY_DATA_CHANGE', (e) => {
+          if (e) cb(e.params)
+        })
+      },
+      unsub() {
+        if (id) {
+          _event.unsubscribe({ id })
+          id = null
+        }
+      },
+    }
+  })()
+  const createSystemEvent = (name) => {
+    let id = null
+    let cb = null
+    return {
+      init(callback) {
+        cb = callback
+      },
+      sub() {
+        this.unsub()
+        if (!cb) return
+        id = _sub(name, cb)
+      },
+      unsub() {
+        if (id) {
+          _event.unsubscribe({ id })
+          id = null
+        }
+      },
+    }
+  }
+  const ScreenAod = createSystemEvent('usual.event.SCREEN_AOD')
+  const ScreenOn = createSystemEvent('usual.event.SCREEN_ON')
+  const ScreenOff = createSystemEvent('usual.event.SCREEN_OFF')
+
+  const DateChanged = createSystemEvent('usual.event.DATE_CHANGED')
+
+  const Loop_s = (() => {
+    let id = null,
+      cb = null,
+      isRun = false
+    function l() {
+      if (!isRun) return
+      if (typeof cb !== 'function') return
+
+      cb()
+
+      clearTimeout(id)
+      const ms = new Date().getMilliseconds()
+      const wait = 1000 - ms
+      id = setTimeout(l, wait)
+    }
+    return {
+      init(callback) {
+        cb = callback
+      },
+      start() {
+        isRun = true
+        l()
+      },
+      stop() {
+        isRun = false
+        clearTimeout(id)
+      },
+    }
+  })()
+  const Loop_m = (() => {
+    let isRun = false
+    const TimeTick = createSystemEvent('usual.event.TIME_TICK')
+
+    return {
+      init(callback) {
+        TimeTick.init(() => {
+          callback()
+
+          if (!isRun) TimeTick.unsub()
+        })
+      },
+      start() {
+        if (!isRun) {
+          TimeTick.sub()
+          isRun = true
+        }
+      },
+      stop() {
+        isRun = false
+      },
+      unsub() {
+        isRun = false
+        TimeTick.unsub()
+      },
+    }
+  })()
+
+  export default {
+    props: [],
+    data() {
+      return {
+        screenStatus: 'on',
+        svg: 0,
+        hourDeg: 0,
+        secondDeg: 0,
+        timeStr: '00:00:00',
+        dateStr: '11/11 周一',
+        Calorie: 35,
+        Heart: 100,
+        Step: '29234',
+        Battery: 100,
+        face: 5,
+        h_: 0,
+        _h: 0,
+        m_: 0,
+        _m: 0,
+        s_: 0,
+        _s: 0,
+      }
+    },
+
+    onInit() {
+      this.refreshSeconds()
+      this.refreshMinutes()
+      this.refreshDate()
+      Loop_s.init(this.refreshSeconds)
+      Loop_m.init(() => {
+        this.screenStatus === 'on'
+          ? this.refreshMinutes()
+          : this.refreshAodTime()
+      })
+      DateChanged.init(this.refreshDate)
+      ScreenAod.init(this.onScreenAod)
+      ScreenOn.init(this.onScreenOn)
+      ScreenOff.init(this.onScreenOff)
+
+      Today.init((t) => {
+        if (t.step_value) {
+          const s = parseInt(t.step_value) || 0
+          this.Step = s < 1e5 ? String(s) : `${Math.round(s / 1000)}k`
+        }
+        if (t.calorie_value)
+          this.Calorie = Math.min(
+            9999,
+            Math.round((parseInt(t.calorie_value) || 0) / 1000)
+          )
+      })
+      Battery.init((v) => (this.Battery = v))
+      Health.init((v) => (this.Heart = v))
+
+      DateChanged.sub()
+      ScreenAod.sub()
+      ScreenOn.sub()
+      ScreenOff.sub()
+
+      this.initScreenStatus()
+    },
+    initScreenStatus() {
+      const res = _storage.getSync({
+        key: 'settings.SCREEN_STATE',
+        global: true,
+      })
+      if (res === 'aod') {
+        this.onScreenAod()
+      }
+    },
+    onReady() {},
+    onDestroy() {
+      this.onHide()
+      Loop_m.unsub()
+      DateChanged.unsub()
+      ScreenAod.unsub()
+      ScreenOn.unsub()
+      ScreenOff.unsub()
+    },
+    onShow() {
+      if (this.screenStatus !== 'on') return
+      this.refreshMinutes()
+      this.refreshDate()
+      Loop_m.start()
+      Loop_s.start()
+      Today.sub()
+      isDev || Battery.sub()
+      Health.sub()
+    },
+    onHide() {
+      Loop_s.stop()
+      Loop_m.stop()
+      Today.unsub()
+      Battery.unsub()
+      Health.unsub()
+    },
+    onScreenAod() {
+      this.screenStatus = 'aod'
+      this.onHide()
+      Loop_m.start()
+      this.refreshAodTime()
+    },
+    onScreenOn() {
+      this.screenStatus = 'on'
+      this.onShow()
+      this.refreshFace()
+    },
+    onScreenOff() {
+      this.screenStatus = 'off'
+      this.onHide()
+    },
+
+    refreshDate() {
+      const time = now()
+      this.dateStr =
+        String(time.getMonth() + 1).padStart(2, '0') +
+        '/' +
+        String(time.getDate()).padStart(2, '0') +
+        ' 周' +
+        '日一二三四五六'[time.getDay()]
+    },
+
+    refreshSeconds() {
+      const time = now()
+      const s = time.getSeconds()
+
+      this.svg = s
+      this.secondDeg = s * 6
+      let str = s.toString().padStart(2, '0')
+
+      this.s_ = str[0]
+      this._s = str[1]
+
+      if (isDev) {
+        this.refreshMinutes()
+        this.refreshDate()
+      }
+    },
+    refreshMinutes() {
+      const time = now()
+      const h = time.getHours()
+      const m = time.getMinutes()
+      this.hourDeg = -h * 15 - m / 4
+      let str = h.toString().padStart(2, '0')
+      this.h_ = str[0]
+      this._h = str[1]
+      str = m.toString().padStart(2, '0')
+      this.m_ = str[0]
+      this._m = str[1]
+    },
+    refreshAodTime() {
+      const time = now()
+      const h = time.getHours()
+      const m = time.getMinutes()
+      this.timeStr =
+        h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0')
+    },
+    refreshFace() {
+      const b = this.Battery
+      this.face = b > 80 ? 5 : b > 60 ? 4 : b > 40 ? 3 : b > 20 ? 2 : 1
+    },
+    nextFace() {
+      this.face > 4 ? (this.face = 0) : this.face++
+    },
+  }
+</script>
+
+<style lang="less">
+  .txt {
+    color: #fff;
+    font-family: vivo-Light;
+    font-size: 20px;
+  }
+  .wrap {
+    .container {
+      height: 450px;
+      width: 390px;
+      flex-direction: column;
+      align-self: center;
+      flex-shrink: 0;
+      .bg {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        width: 390px;
+      }
+      .dial {
+        position: absolute;
+        left: 0px;
+        top: 30px;
+        width: 390px;
+        height: 390px;
+      }
+      .date {
+        position: absolute;
+        top: 130px;
+        left: 0px;
+        flex-direction: column;
+        align-items: center;
+        .txt {
+          font-size: 20px;
+          color: #fff;
+        }
+      }
+      .svgTime {
+        position: absolute;
+        top: 150px;
+        left: 0px;
+        flex-direction: column;
+        align-items: center;
+      }
+      .ring {
+        position: absolute;
+        top: 82px;
+        left: 52px;
+        width: 286px;
+        height: 286px;
+      }
+      .ring-mask {
+        position: absolute;
+        top: 80px;
+        left: 50px;
+        width: 290px;
+        height: 290px;
+      }
+      .ring2 {
+        position: absolute;
+        top: 79px;
+        left: 49px;
+        width: 292px;
+        height: 292px;
+      }
+      .arrow {
+        position: absolute;
+        left: 190px;
+        top: 75px;
+        width: 10px;
+        height: 19px;
+      }
+      .finger {
+        position: absolute;
+        left: 186px;
+        width: 18px;
+        height: 450px;
+        justify-content: center;
+
+        .img {
+          top: 58px;
+          width: 18px;
+          height: 36px;
+        }
+      }
+
+      .data-box {
+        position: absolute;
+        top: 235px;
+        width: 390px;
+        height: 100px;
+        justify-content: center;
+        .box {
+          height: 30px;
+          width: 70px;
+          justify-content: center;
+          text-align: center;
+        }
+        .calorie {
+          top: 30px;
+          left: 35px;
+        }
+        .heart {
+          left: 10px;
+          top: 70px;
+        }
+        .battery {
+          left: -10px;
+          top: 70px;
+        }
+        .step {
+          left: -38px;
+          top: 30px;
+        }
+      }
+      .face {
+        position: absolute;
+        top: 22px;
+        left: 24px;
+        width: 53px;
+        height: 53px;
+      }
+      .area {
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        left: 0px;
+        top: 0px;
+      }
+      .aod-box {
+        position: absolute;
+        width: 390px;
+        height: 450px;
+        justify-content: center;
+
+        .time {
+          font-size: 50px;
+          font-family: vivo-Light;
+          color: #ffee99;
+        }
+      }
+    }
+  }
+</style>
