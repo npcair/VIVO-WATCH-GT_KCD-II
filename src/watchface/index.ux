@@ -67,6 +67,7 @@
   import _vibrator from '@system.vibrator'
   import _router from '@system.router'
   import _device from '@system.device'
+  import _sensor from '@system.sensor'
   import _property from '@system.property'
   import _health from '@service.health'
   const isDev = process.env.NODE_ENV == 'development'
@@ -84,10 +85,15 @@
   const Health = (() => {
     let cb = null
     let lastHeart = 0
+    let onBody = true
     const HR = _health.DATA_TYPES ? _health.DATA_TYPES.HEART_RATE : 0
     return {
       init(callback) {
         cb = (res) => {
+          if (!onBody) {
+            callback('--')
+            return
+          }
           const v =
             res && res.value != null
               ? res.value
@@ -108,10 +114,23 @@
             callback: cb,
           })
         } catch (e) {}
+        try {
+          _sensor.subscribeOnBodyState({
+            callback: (r) => {
+              if (r) {
+                onBody = r.value !== false
+                if (!onBody) cb()
+              }
+            },
+          })
+        } catch (e) {}
       },
       unsub() {
         try {
           _health.unsubscribeSample({ dataType: HR })
+        } catch (e) {}
+        try {
+          _sensor.unsubscribeOnBodyState()
         } catch (e) {}
       },
     }
@@ -279,9 +298,9 @@
         secondDeg: 0,
         timeStr: '00:00:00',
         dateStr: '11/11 周一',
-        Calorie: 35,
-        Heart: 100,
-        Step: '29234',
+        Calorie: 400,
+        Heart: 75,
+        Step: '8000',
         Battery: 100,
         face: 5,
         h_: 0,
