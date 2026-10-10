@@ -9,11 +9,11 @@
       <image
         src="/assets/ring.png"
         class="ring"
-        style="transform: rotate({{secondDeg}}deg)"></image>
-      <image src="/assets/r/{{svg}}.svg" class="ring-mask"></image>
+        style="transform: rotate({{ringDeg}}deg)"></image>
+      <image src="/assets/r/{{ring}}.svg" class="ring-mask"></image>
       <image src="/assets/2ring.png" class="ring2"></image>
       <image src="/assets/arrow.png" class="arrow"></image>
-      <div class="finger" style="transform: rotate({{secondDeg}}deg)">
+      <div class="finger" style="transform: rotate({{ringDeg}}deg)">
         <image src="/assets/finger.png" class="img"></image>
       </div>
       <image src="/assets/f/{{face}}.png" class="face"></image>
@@ -21,15 +21,22 @@
         <text class="txt">{{ dateStr }}</text>
       </div>
       <div class="time">
-        <div>
-          <image class="img" src="/assets/ch/{{h_}}.svg"></image>
-          <image class="img" src="/assets/ch/{{_h}}.svg"></image>
-          <image class="img" src="/assets/ch/l.svg"></image>
-          <image class="img" src="/assets/ch/{{m_}}.svg"></image>
-          <image class="img" src="/assets/ch/{{_m}}.svg"></image>
-          <image class="img" src="/assets/ch/l.svg"></image>
-          <image class="img" src="/assets/ch/{{s_}}.svg"></image>
-          <image class="img" src="/assets/ch/{{_s}}.svg"></image>
+        <div class="style-0" if="{{!timeStyle}}">
+          <image class="img" src="/assets/s0/{{h_}}.svg"></image>
+          <image class="img" src="/assets/s0/{{_h}}.svg"></image>
+          <image class="img" src="/assets/s0/l.svg"></image>
+          <image class="img" src="/assets/s0/{{m_}}.svg"></image>
+          <image class="img" src="/assets/s0/{{_m}}.svg"></image>
+          <image class="img" src="/assets/s0/l.svg"></image>
+          <image class="img" src="/assets/s0/{{s_}}.svg"></image>
+          <image class="img" src="/assets/s0/{{_s}}.svg"></image>
+        </div>
+        <div class="style-1" else>
+          <image class="img" src="/assets/s1/{{h_}}.svg"></image>
+          <image class="img" src="/assets/s1/{{_h}}.svg"></image>
+          <image class="img" src="/assets/s1/l.svg"></image>
+          <image class="img" src="/assets/s1/{{m_}}.svg"></image>
+          <image class="img" src="/assets/s1/{{_m}}.svg"></image>
         </div>
       </div>
       <div class="data-box">
@@ -51,11 +58,11 @@
 
     <div class="container" show="{{screenStatus === 'aod'}}">
       <div class="aod-box">
-        <image class="img" src="/assets/num/{{h_}}.svg"></image>
-        <image class="img" src="/assets/num/{{_h}}.svg"></image>
-        <image class="img" src="/assets/num/l.svg"></image>
-        <image class="img" src="/assets/num/{{m_}}.svg"></image>
-        <image class="img" src="/assets/num/{{_m}}.svg"></image>
+        <image class="img" src="/assets/s1/{{h_}}.svg"></image>
+        <image class="img" src="/assets/s1/{{_h}}.svg"></image>
+        <image class="img" src="/assets/s1/l.svg"></image>
+        <image class="img" src="/assets/s1/{{m_}}.svg"></image>
+        <image class="img" src="/assets/s1/{{_m}}.svg"></image>
       </div>
     </div>
   </div>
@@ -77,6 +84,7 @@
   const isDev = process.env.NODE_ENV == 'development'
   const isPreview = isDev && false
   const now = () => (isPreview ? new Date(2024, 1, 18, 10, 0, 8) : new Date())
+  const f2n = (n) => String(n).padStart(2, '0')
   function _sub(name, cb) {
     try {
       const id = _event.subscribe({
@@ -298,14 +306,14 @@
     data() {
       return {
         screenStatus: 'on',
-        svg: 0,
+        timeStyle: 0,
+        ring: 0,
+        ringDeg: 0,
         hourDeg: 0,
-        secondDeg: 0,
-        timeStr: '00:00:00',
         dateStr: '11/11 周一',
         Calorie: 400,
         Heart: 75,
-        Step: '8000',
+        Step: 8000,
         Battery: 100,
         face: 5,
         h_: 0,
@@ -331,7 +339,7 @@
       Today.init((t) => {
         if (t.step_value) {
           const s = parseInt(t.step_value) || 0
-          this.Step = s < 1e5 ? String(s) : `${Math.round(s / 1000)}k`
+          this.Step = s < 1e5 ? s : `${Math.round(s / 1000)}k`
         }
         if (t.calorie_value)
           this.Calorie = Math.min(
@@ -390,7 +398,6 @@
       this.screenStatus = 'aod'
       this.onHide()
       Loop_m.start()
-      this.refreshAodTime()
     },
     onScreenOn() {
       this.screenStatus = 'on'
@@ -405,9 +412,9 @@
     refreshDate() {
       const time = now()
       this.dateStr =
-        String(time.getMonth() + 1).padStart(2, '0') +
+        f2n(time.getMonth() + 1) +
         '/' +
-        String(time.getDate()).padStart(2, '0') +
+        f2n(time.getDate()) +
         ' 周' +
         '日一二三四五六'[time.getDay()]
     },
@@ -416,13 +423,13 @@
       const time = now()
       const s = time.getSeconds()
 
-      this.svg = s
-      this.secondDeg = s * 6
-      let str = s.toString().padStart(2, '0')
-
-      this.s_ = str[0]
-      this._s = str[1]
-
+      this.ring = s
+      this.ringDeg = this.ring * 6
+      if (!this.timeStyle) {
+        let str = f2n(s)
+        this.s_ = str[0]
+        this._s = str[1]
+      }
       if (isDev) {
         this.refreshMinutes()
         this.refreshDate()
@@ -433,19 +440,12 @@
       const h = time.getHours()
       const m = time.getMinutes()
       this.hourDeg = -h * 15 - m / 4
-      let str = h.toString().padStart(2, '0')
+      let str = f2n(h)
       this.h_ = str[0]
       this._h = str[1]
-      str = m.toString().padStart(2, '0')
+      str = f2n(m)
       this.m_ = str[0]
       this._m = str[1]
-    },
-    refreshAodTime() {
-      const time = now()
-      const h = time.getHours()
-      const m = time.getMinutes()
-      this.timeStr =
-        h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0')
     },
     refreshFace() {
       const b = this.Battery
@@ -500,8 +500,16 @@
         left: 0px;
         justify-content: center;
         align-items: center;
-        .img {
-          height: 80px;
+        .style-0 {
+          .img {
+            height: 80px;
+          }
+        }
+        .style-1 {
+          margin-bottom: 3px;
+          .img {
+            height: 60px;
+          }
         }
       }
       .ring {

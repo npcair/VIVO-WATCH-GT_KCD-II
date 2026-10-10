@@ -1,91 +1,91 @@
 {
-    "package": "com.vivo.wf.watch103529",
-    "versionName": "1.0.0.0",
-    "versionCode": 10000,
-    "deviceTypeList": [
-        "watch-square"
-    ],
-    "name": "KCD-II",
-    "permissions": [
-        {
+  "package": "com.vivo.wf.watch103529",
+  "versionName": "1.0.0.0",
+  "versionCode": 10000,
+  "deviceTypeList": [
+    "watch-square"
+  ],
+  "name": "KCD-II",
+  "config": {
+    "designWidth": 390
+  },
+  "router": {
+    "entry": "watch103529",
+    "watchfaces": {
+      "watch103529": {
+        "id": "103529",
+        "name": "KCD-II",
+        "component": "index",
+        "edit": "",
+        "permissions": [
+          {
             "name": "watch.permission.READ_HEALTH_DATA"
-        }
-    ],
-    "features": [
-        {
+          }
+        ],
+        "features": [
+          {
             "name": "system.watchface"
-        },
-        {
+          },
+          {
             "name": "system.storage"
-        },
-        {
+          },
+          {
             "name": "system.rotation"
-        },
-        {
+          },
+          {
             "name": "system.event"
-        },
-        {
+          },
+          {
             "name": "system.router"
-        },
-        {
+          },
+          {
             "name": "system.timer"
-        },
-        {
+          },
+          {
             "name": "system.configuration"
-        },
-        {
+          },
+          {
             "name": "system.tracker"
-        },
-        {
+          },
+          {
             "name": "service.exchange"
-        },
-        {
+          },
+          {
             "name": "system.package"
-        },
-        {
+          },
+          {
             "name": "system.am"
-        },
-        {
+          },
+          {
             "name": "system.property"
-        },
-        {
+          },
+          {
             "name": "system.brightness"
-        },
-        {
+          },
+          {
             "name": "system.vibrator"
-        },
-        {
+          },
+          {
             "name": "system.device"
-        },
-        {
+          },
+          {
             "name": "system.battery"
-        },
-        {
+          },
+          {
             "name": "system.sensor"
-        },
-        {
+          },
+          {
             "name": "service.health"
+          }
+        ],
+        "params": {
+          "previewImage": [
+            "/assets/images/preview.png"
+          ],
+          "hpw": 1
         }
-    ],
-    "config": {
-        "designWidth": 390
-    },
-    "router": {
-        "entry": "watchface",
-        "watchfaces": {
-            "watchface": {
-                "id": "103529",
-                "name": "KCD-II",
-                "component": "index",
-                "edit": "",
-                "params": {
-                    "previewImage": [
-                        "/assets/images/preview.png"
-                    ],
-                    "hpw": 1
-                }
-            }
-        }
-    },
-    "minPlatformVersion": 1070
+      }
+    }
+  },
+  "minPlatformVersion": 1070
 }
