@@ -374,8 +374,10 @@
       Loop_m.start()
       Loop_s.start()
       Today.sub()
-      isDev || Battery.sub()
-      Health.sub()
+      if (!isDev) {
+        Battery.sub()
+        Health.sub()
+      }
     },
     onHide() {
       Loop_s.stop()
@@ -494,7 +496,7 @@
       }
       .time {
         position: absolute;
-        bottom: 215px;
+        bottom: 220px;
         left: 0px;
         justify-content: center;
         align-items: center;

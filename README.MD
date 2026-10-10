@@ -1,8 +1,9 @@
 # 天国拯救2非官方表盘
-![alt text](src/assets/images/preview.png)
+![主表盘](preview/preview.png)
+![AOD](preview/previewAod.png)
 # 功能
 - ## 已支持
-  - 健康数据显示:卡路里、心率、电量、步数
+  - 数据显示:卡路里、心率、电量、步数
   - 24时盘随时间旋转
   - 秒进度环带有材质和手指 (刻度是60刻度，游戏是48刻)
   - 左上角的脸可以点击切换；每次开屏时会自动按电量切换
@@ -22,11 +23,11 @@
 ### rpk解包
  表盘文件rpk可以直接使用压缩工具打开并解压缩，里面的vru文件是vivo自创格式，可以使用本项目tools内的[解包脚本](tools/vru_extract.py)解开（感谢ai发力）使用为 `python vru_extract.py xxx.vru  out`，同时也有一个c语言版本的，使用vs开发终端cd到.c文件所在路径直接`cl vru_extract.c`编译即可获得exe产物，可将windows文件打开方式设为此exe
 ### 素材来源
-找到`KingdomComeDeliverance2\Data\IPL_GameData.pak`使用压缩工具打开
+在游戏文件夹内找到`KingdomComeDeliverance2\Data\IPL_GameData.pak`使用压缩工具(如7-Zip)打开
 | 路径                                                    |      内容      |
 | :------------------------------------------------------ | :------------ |
 | `IPL_GameData.pak\Libs\UI\Textures\SkipTime\`           | 时间盘主体素材 |
 | `IPL_GameData.pak\Libs\UI\Textures\pak\Icons\RPG`       |    一些图标    |
 | `IPL_GameData.pak\Libs\UI\Textures\Apse\reputation.dds` |      脸图      |
 
-可以使用免费的[Paint.NET](https://paint.net/download.html)来打开dds文件并提供dds文件的预览功能
+其中的DDS文件（DirectDraw Surface）是一种由微软与NVIDIA推广的纹理图像格式，可以使用免费的[Paint.NET](https://paint.net/download.html)来打开dds文件，设为默认打开工具后会提供dds文件的预览功能
