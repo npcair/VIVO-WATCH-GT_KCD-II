@@ -1,0 +1,215 @@
+<template>
+  <div class="root">
+    <div class="title">
+      <vw-icon icon="delete" [size]="48" @click="exit"></vw-icon>
+      <text class="txt">表盘设置</text>
+      <vw-icon icon="finish" [size]="48" @click="editComplete"></vw-icon>
+    </div>
+    <div class="area">
+      <div class="box" @click="exit"></div>
+      <div class="box" @click="editComplete"></div>
+    </div>
+    <list class="list">
+      <list-item class="tit-item" type="tit">
+        <text class="txt">表盘时间样式</text>
+      </list-item>
+      <list-item class="item" type="style-0" @click="changeTimeStyle(!0)">
+        <div class="style-0">
+          <image class="img" src="/assets/s0/{{h_}}.svg"></image>
+          <image class="img" src="/assets/s0/{{_h}}.svg"></image>
+          <image class="img" src="/assets/s0/l.svg"></image>
+          <image class="img" src="/assets/s0/{{m_}}.svg"></image>
+          <image class="img" src="/assets/s0/{{_m}}.svg"></image>
+          <image class="img" src="/assets/s0/l.svg"></image>
+          <image class="img" src="/assets/s0/{{s_}}.svg"></image>
+          <image class="img" src="/assets/s0/{{_s}}.svg"></image>
+        </div>
+        <input
+          type="radio"
+          checked="{{!timeStyle}}"
+          @change="changeTimeStyle(!0)" />
+      </list-item>
+      <list-item class="item" type="style-1" @click="changeTimeStyle(!1)">
+        <div class="style-1">
+          <image class="img" src="/assets/s1/{{h_}}.svg"></image>
+          <image class="img" src="/assets/s1/{{_h}}.svg"></image>
+          <image class="img" src="/assets/s1/l.svg"></image>
+          <image class="img" src="/assets/s1/{{m_}}.svg"></image>
+          <image class="img" src="/assets/s1/{{_m}}.svg"></image>
+        </div>
+        <input
+          type="radio"
+          checked="{{timeStyle}}"
+          @change="changeTimeStyle(!1)" />
+      </list-item>
+    </list>
+  </div>
+</template>
+
+<script>
+  import _storage from '@system.storage'
+  import _evt from '@system.event'
+  import _router from '@system.router'
+
+  const Storage = (() => {
+    const CFG_KEY = 'KCD-II'
+    const DIAL_ID = '103529'
+    return {
+      save(value) {
+        const save = {
+          key: CFG_KEY,
+          value,
+          global: false,
+        }
+        try {
+          if (_storage.setSync) _storage.setSync(save)
+          else if (_storage.set) _storage.set(save)
+        } catch (e) {}
+        try {
+          _evt.publish({
+            eventName: 'event.watchface.EDITED',
+            options: { params: { dial_id: DIAL_ID } },
+          })
+        } catch (e) {}
+      },
+      get() {
+        let saved = {}
+        try {
+          const raw = _storage.getSync({ key: CFG_KEY, global: false })
+          saved = typeof raw === 'string' ? JSON.parse(raw) : raw || {}
+        } catch (e) {}
+        return saved
+      },
+    }
+  })()
+  export default {
+    data() {
+      return {
+        timeStyle: false,
+        h_: 0,
+        _h: 0,
+        m_: 0,
+        _m: 0,
+        s_: 0,
+        _s: 0,
+        timerId: -1,
+      }
+    },
+    changeTimeStyle(evt) {
+      console.log(evt, typeof evt)
+
+      this.timeStyle = !evt
+    },
+    onInit() {
+      const saved = Storage.get()
+      this.timeStyle = !!saved.timeStyle
+
+      this.refreshTime()
+      this.timerId = setInterval(this.refreshTime, 1000)
+    },
+    refreshTime() {
+      const f2n = (n) => String(n).padStart(2, '0')
+      const time = new Date()
+      const s = time.getSeconds()
+      const h = time.getHours()
+      const m = time.getMinutes()
+      let str = f2n(s)
+      this.s_ = str[0]
+      this._s = str[1]
+      str = f2n(h)
+      this.h_ = str[0]
+      this._h = str[1]
+      str = f2n(m)
+      this.m_ = str[0]
+      this._m = str[1]
+    },
+    onReady() {},
+
+    onShow() {},
+
+    onHide() {},
+
+    onDestroy() {
+      clearInterval(this.timerId)
+    },
+    exit() {
+      try {
+        _router.back()
+      } catch (e) {}
+    },
+    // 完成：存盘 + 广播 + 返回
+    editComplete() {
+      Storage.save({ timeStyle: this.timeStyle })
+      try {
+        _router.back()
+      } catch (e) {}
+    },
+
+    // 侧键（keyCode=1, keyAction=1）等同「完成」
+    onKey(event) {
+      if (event && event.keyCode === 1 && event.keyAction === 1) {
+        this.editComplete()
+        return true
+      }
+    },
+  }
+</script>
+
+<style lang="less">
+  .root {
+    width: 390px;
+    height: 450px;
+    position: absolute;
+    flex-direction: column;
+  }
+  .title {
+    justify-content: space-between;
+    padding: 10px 30px;
+    .txt {
+      color: #ffffff;
+    }
+  }
+  .area {
+    position: absolute;
+    top: 0px;
+    justify-content: space-between;
+    .box {
+      width: 100px;
+      height: 100px;
+    }
+  }
+  .list {
+    margin-left: 10px;
+    margin-right: 10px;
+    .tit-item {
+      margin-top: 10px;
+      padding: 0px 30px;
+      .txt {
+        color: #fff;
+      }
+    }
+    .item {
+      justify-content: space-between;
+      align-items: center;
+      background-color: #2f2f2f;
+      padding: 20px;
+      margin-top: 10px;
+      border-radius: 20px;
+      .txt {
+        max-width: 240px;
+        color: #fff;
+      }
+      .style-0 {
+        .img {
+          height: 80px;
+        }
+      }
+      .style-1 {
+        margin-bottom: 3px;
+        .img {
+          height: 60px;
+        }
+      }
+    }
+  }
+</style>

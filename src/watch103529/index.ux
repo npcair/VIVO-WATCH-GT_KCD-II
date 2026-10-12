@@ -222,8 +222,8 @@
     let id = null
     let cb = null
     return {
-      init(callback) {
-        cb = callback
+      init(onEvent) {
+        cb = onEvent
       },
       sub() {
         this.unsub()
@@ -238,6 +238,39 @@
       },
     }
   }
+  const Storage = (() => {
+    const CFG_KEY = 'KCD-II'
+    const DIAL_ID = '103529'
+    let id = null
+    let cb = null
+    function get() {
+      let saved = {}
+      try {
+        const raw = _storage.getSync({ key: CFG_KEY, global: false })
+        saved = typeof raw === 'string' ? JSON.parse(raw) : raw || {}
+      } catch (e) {}
+      return saved
+    }
+    return {
+      init(callback) {
+        cb = () => {
+          callback(get())
+        }
+        cb()
+      },
+      sub() {
+        this.unsub()
+        if (!cb) return
+        id = _sub('event.watchface.EDITED', cb)
+      },
+      unsub() {
+        if (id) {
+          _event.unsubscribe({ id })
+          id = null
+        }
+      },
+    }
+  })()
   const ScreenAod = createSystemEvent('usual.event.SCREEN_AOD')
   const ScreenOn = createSystemEvent('usual.event.SCREEN_ON')
   const ScreenOff = createSystemEvent('usual.event.SCREEN_OFF')
@@ -335,7 +368,7 @@
       ScreenAod.init(this.onScreenAod)
       ScreenOn.init(this.onScreenOn)
       ScreenOff.init(this.onScreenOff)
-
+      Storage.init((v) => (this.timeStyle = v.timeStyle))
       Today.init((t) => {
         if (t.step_value) {
           const s = parseInt(t.step_value) || 0
@@ -354,7 +387,7 @@
       ScreenAod.sub()
       ScreenOn.sub()
       ScreenOff.sub()
-
+      Storage.sub()
       this.initScreenStatus()
     },
     initScreenStatus() {
@@ -374,6 +407,7 @@
       ScreenAod.unsub()
       ScreenOn.unsub()
       ScreenOff.unsub()
+      Storage.unsub()
     },
     onShow() {
       if (!isDev) if (this.screenStatus !== 'on') return

@@ -13,10 +13,10 @@
     "entry": "watch103529",
     "watchfaces": {
       "watch103529": {
-        "id": "103529",
+        "id": 103529,
         "name": "KCD-II",
         "component": "index",
-        "edit": "",
+        "edit": "edit",
         "permissions": [
           {
             "name": "watch.permission.READ_HEALTH_DATA"
@@ -84,6 +84,13 @@
           ],
           "hpw": 1
         }
+      }
+    },
+    "entry": "edit",
+    "pages": {
+      "edit": {
+        "component": "index",
+        "stopGestureQuit": false
       }
     }
   },
